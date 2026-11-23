@@ -240,6 +240,9 @@ static keyNum_t IN_TranslateSDLToQ3Key( SDL_Keysym *keysym, qboolean down )
 			case SDLK_KP_8:         key = K_KP_UPARROW;    break;
 			case SDLK_UP:           key = K_UPARROW;       break;
 			case SDLK_ESCAPE:       key = K_ESCAPE;        break;
+#ifdef __ANDROID__
+			case SDLK_AC_BACK:      key = K_ESCAPE;        break;  // Android's Back button: the menu
+#endif
 			case SDLK_KP_ENTER:     key = K_KP_ENTER;      break;
 			case SDLK_RETURN:       key = K_ENTER;         break;
 			case SDLK_TAB:          key = K_TAB;           break;
