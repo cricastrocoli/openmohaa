@@ -2350,6 +2350,13 @@ void Weapon::SetCantPartialReload(Event *ev)
         return;
     }
 
+    // g_garandreload 1: in single player, weapons that can only be reloaded when empty (the M1
+    // Garand: its en-bloc clip) can be reloaded at any time, like the others. Only the missing
+    // rounds are taken from the player's ammo.
+    if (g_gametype->integer == GT_SINGLE_PLAYER && gi.Cvar_Get("g_garandreload", "0", 0)->integer) {
+        return;
+    }
+
     m_bCanPartialReload = qfalse;
 }
 
