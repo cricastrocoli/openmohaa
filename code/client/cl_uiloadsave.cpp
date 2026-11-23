@@ -395,11 +395,20 @@ void UI_ShowSaveResult(qboolean success, qboolean routine)
         return;
     }
 
+    // Through the game's localization, line by line, so translation mods can translate these
+    // too (global/localization.txt: { "The game was saved." "..." }).
+    char text[512];
     if (success) {
-        UIMessageDialog::ShowMessageBox("Save", "The game was saved.");
+        Q_strncpyz(text, Sys_LV_CL_ConvertString("The game was saved."), sizeof(text));
+        UIMessageDialog::ShowMessageBox(Sys_LV_CL_ConvertString("Save"), text);
     } else {
-        UIMessageDialog::ShowMessageBox(
-            "Save failed", "The game could not be saved.\nThe storage may be full or not writable."
+        Com_sprintf(
+            text,
+            sizeof(text),
+            "%s\n%s",
+            Sys_LV_CL_ConvertString("The game could not be saved."),
+            Sys_LV_CL_ConvertString("The storage may be full or not writable.")
         );
+        UIMessageDialog::ShowMessageBox(Sys_LV_CL_ConvertString("Save failed"), text);
     }
 }
