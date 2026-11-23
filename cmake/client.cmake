@@ -106,7 +106,13 @@ list(APPEND CLIENT_BINARY_SOURCES
     ${ASM_SOURCES}
     ${CLIENT_LIBRARY_SOURCES})
 
-add_executable(${CLIENT_BINARY} ${CLIENT_EXECUTABLE_OPTIONS} ${CLIENT_BINARY_SOURCES})
+if(ANDROID)
+    # Android: SDLActivity loads the game as libmain.so and calls SDL_main.
+    add_library(${CLIENT_BINARY} SHARED ${CLIENT_BINARY_SOURCES})
+    set_target_properties(${CLIENT_BINARY} PROPERTIES OUTPUT_NAME libmain)
+else()
+    add_executable(${CLIENT_BINARY} ${CLIENT_EXECUTABLE_OPTIONS} ${CLIENT_BINARY_SOURCES})
+endif()
 
 target_include_directories(     ${CLIENT_BINARY} PRIVATE ${CLIENT_INCLUDE_DIRS})
 target_include_directories(     ${CLIENT_BINARY} PRIVATE ${SOURCE_DIR}/client)

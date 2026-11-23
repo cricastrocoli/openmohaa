@@ -122,7 +122,7 @@ static ALuint S_OPENAL_Format(float width, int channels);
 #    define ALDRIVER_DEFAULT "OpenAL32.dll"
 #elif defined(__APPLE__)
 #    define ALDRIVER_DEFAULT "libopenal.1.dylib"
-#elif defined(__OpenBSD__)
+#elif defined(__OpenBSD__) || defined(__ANDROID__)
 #    define ALDRIVER_DEFAULT "libopenal.so"
 #else
 #    define ALDRIVER_DEFAULT "libopenal.so.1"
@@ -4315,6 +4315,11 @@ S_SetupMovieAudio
 void S_SetupMovieAudio(const char *pszMovieName)
 {
     char filename[MAX_QPATH];
+
+    if (!al_initialized) {
+        // No sound (OpenAL failed to load): movies play silently instead of crashing.
+        return;
+    }
 
     S_StopMovieAudio();
 

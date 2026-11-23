@@ -54,7 +54,12 @@ void gsiCancelThread(GSIThreadID id)
 	//should i destroy the attributes here?
 	pthread_attr_destroy(&id.attr);
 
+#ifdef __ANDROID__
+	// Android has no pthread_cancel (and GameSpy is off there).
+	if (0) {
+#else
 	if (pthread_cancel(id.thread) != PTHREAD_NO_ERROR) {
+#endif
 		//there was an error - how should we handle these? or should we?
 		gsDebugFormat(GSIDebugCat_Common, GSIDebugType_Misc, GSIDebugLevel_WarmError,
 			"Failed to cancel thread\r\n");
