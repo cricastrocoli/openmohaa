@@ -4068,6 +4068,20 @@ void UI_ServerLoaded(void)
     event = new Event(EV_Widget_Activate);
     ui_pLoadingMenu->PassEventToWidget("continuebutton", event);
 
+    // Added in OPM (Android port)
+    //  Put the pointer on the continue button, so a controller (or a mouse) doesn't have to
+    //  cross the whole screen to reach it.
+    {
+        UIWidget *button = pCurrentMenu->GetNamedWidget("continuebutton");
+        if (button) {
+            const UIRect2D  frame  = button->getFrame();
+            const UIPoint2D center = button->getGlobalPoint(
+                UIPoint2D(frame.size.width / 2.0f, frame.size.height / 2.0f)
+            );
+            CL_SetMousePos((int)center.x, (int)center.y);
+        }
+    }
+
     Com_FakePause();
 }
 
