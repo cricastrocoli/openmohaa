@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include "cl_ui.h"
+#include "../uilib/uimessage.h"
 #include "../qcommon/localization.h"
 
 class FAKKLoadGameItem : public UIListCtrlItem
@@ -376,4 +377,29 @@ void FAKKLoadGameItem::DrawListItem(int iColumn, const UIRect2D& drawRect, bool 
 qboolean FAKKLoadGameItem::IsHeaderEntry() const
 {
     return qfalse;
+}
+
+/*
+====================
+UI_ShowSaveResult
+
+Added in OPM (Android port)
+  A dialog after saving, closed with OK, so a save that failed (no permission, storage full)
+  is never mistaken for one that worked. Routine saves (autosaves, quick saves) that worked
+  don't interrupt the game.
+====================
+*/
+void UI_ShowSaveResult(qboolean success, qboolean routine)
+{
+    if (success && routine) {
+        return;
+    }
+
+    if (success) {
+        UIMessageDialog::ShowMessageBox("Save", "The game was saved.");
+    } else {
+        UIMessageDialog::ShowMessageBox(
+            "Save failed", "The game could not be saved.\nThe storage may be full or not writable."
+        );
+    }
 }

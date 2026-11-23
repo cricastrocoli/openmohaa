@@ -135,8 +135,15 @@ cvar_t              *cl_movieaudio;
 
 unsigned char        UIListCtrlItem[8];
 
+#ifdef __ANDROID__
+// Handheld screens are small: the interface (HUD, messages, dialogs) is scaled up from 720
+// lines, so it keeps the same physical size at any render resolution (1.5x at 1080p).
+static const float maxWidthRes  = 1280;
+static const float maxHeightRes = 720;
+#else
 static const float maxWidthRes  = 1920;
 static const float maxHeightRes = 1080;
+#endif
 
 inventory_t              client_inv;
 bind_t                   client_bind;

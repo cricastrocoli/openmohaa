@@ -2605,6 +2605,10 @@ void SV_SaveGame(const char *gamename, qboolean autosave)
 
 	Q_strncpyz(svs.gameName, name, sizeof(svs.gameName));
 
+	// Added in OPM (Android port): the game module sets g_lastSaveFailed when it couldn't
+	// write the level, so the result can be shown.
+	Cvar_Set("g_lastSaveFailed", "0");
+
 	if (!SV_ArchiveLevelFile(qfalse, autosave)) {
 		if (cls.savedCgameState) {
 			Z_Free(cls.savedCgameState);
@@ -2612,7 +2616,10 @@ void SV_SaveGame(const char *gamename, qboolean autosave)
 		}
 	}
 
-	SV_ArchiveServerFile(qfalse, autosave);
+	{
+		qboolean saved = SV_ArchiveServerFile(qfalse, autosave) && !Cvar_VariableIntegerValue("g_lastSaveFailed");
+		UI_ShowSaveResult(saved, autosave || !Q_stricmp(name, "quick"));
+	}
 
 	Com_Printf("Done.\n");
 

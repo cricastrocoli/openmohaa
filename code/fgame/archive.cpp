@@ -85,10 +85,14 @@ ArchiveFile::~ArchiveFile()
     Close();
 }
 
-void ArchiveFile::Close()
+qboolean ArchiveFile::Close()
 {
+    qboolean ok = qtrue;
+
     if (writing) {
-        gi.FS_WriteFile(filename.c_str(), buffer, length);
+        // The save is built in memory and written here: report a write that failed or fell
+        // short (no permission, storage full) instead of losing it silently.
+        ok = gi.FS_WriteFile(filename.c_str(), buffer, length) == (int)length;
     }
 
     if (buffer) {
@@ -100,6 +104,8 @@ void ArchiveFile::Close()
     filename = "";
     length   = 0;
     pos      = 0;
+
+    return ok;
 }
 
 const char *ArchiveFile::Filename(void)
@@ -359,7 +365,9 @@ void Archiver::Close(void)
         archivefile.Compress();
     }
 
-    archivefile.Close();
+    if (!archivefile.Close()) {
+        fileerror = true;
+    }
 
     if (archivemode == ARCHIVE_READ) {
         int              i, num;

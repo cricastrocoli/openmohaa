@@ -1577,6 +1577,14 @@ qboolean G_ArchiveLevel(
             gi.Printf(HUD_MESSAGE_YELLOW "%s\n", gi.LV_ConvertString("Game Loaded"));
         } else {
             arc.Close();
+            // Tell the server how it went (see SV_SaveGame).
+            gi.cvar_set("g_lastSaveFailed", arc.HasFileError() ? "1" : "0");
+            if (arc.HasFileError()) {
+                // The save couldn't be written (no permission, storage full...): say so
+                // rather than announcing a save that isn't there.
+                gi.Printf(HUD_MESSAGE_WHITE "%s\n", gi.LV_ConvertString("Couldn't save the game"));
+                return qfalse;
+            }
             gi.Printf(HUD_MESSAGE_YELLOW "%s\n", gi.LV_ConvertString("Game Saved"));
         }
 

@@ -216,6 +216,8 @@ typedef struct uiexport_s {
     void        UI_UpdateCenterPrint(const char *s, float alpha);
     void        UI_UpdateLocationPrint(int x, int y, const char *s, float alpha);
     void        UI_SetupFiles(void);
+    // After a save from the save menu: a dialog saying whether it worked (failures always).
+    void        UI_ShowSaveResult(qboolean success, qboolean routine);
     void        UI_PrintConsole(const char *msg);
     void        UI_PrintDeveloperConsole(const char *msg);
 

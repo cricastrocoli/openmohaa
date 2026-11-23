@@ -163,6 +163,7 @@ protected:
     fonthorzjustify_t     m_iFontAlignmentHorizontal;
     fontvertjustify_t     m_iFontAlignmentVertical;
     qboolean              m_bVirtual;
+    qboolean              m_bScaleOverride; // Added in OPM: see setScale
     str                   m_enabledCvar;
     //
     // Added in 2.0
@@ -361,6 +362,9 @@ public:
     bool          isVirtual() const;
     const vec2_t& getVirtualScale() const;
     const vec2_t& getHighResScale() const;
+    // Added in OPM: draws and lays out this widget at a fixed scale (text, title bar, buttons)
+    // rather than the interface's, e.g. a dialog matching the menus' size.
+    void          setScale(float sx, float sy);
 };
 
 class UIWidgetContainer : public UIWidget

@@ -64,33 +64,42 @@ void UIMessageDialog::FrameInitialized(void)
 
 void UIMessageDialog::setText(const char *text)
 {
-    int maxWidth  = m_label->getFont()->getWidth(text, -1);
-    int maxHeight = m_label->getFont()->getHeight(text, -1);
+    // Measured and laid out at the scale the label, button and title bar are drawn at, so
+    // everything grows together.
+    // The menus are laid out at 480 lines and scaled to the screen: the dialog matches them.
+    const float menuScale = uid.vidHeight / 480.0f;
+    setScale(menuScale, menuScale);
+    getChildSpace()->setScale(menuScale, menuScale);
+    m_label->setScale(menuScale, menuScale);
+    m_ok->setScale(menuScale, menuScale);
+
+    const float *scale     = getHighResScale();
+    int          maxWidth  = m_label->getFont()->getWidth(text, -1) * scale[0];
+    int          maxHeight = m_label->getFont()->getHeight(text, -1, scale);
 
     m_label->setTitle(text);
 
     UIRect2D rect;
-    rect.pos.x       = (uid.vidWidth - Q_max(maxWidth, 100)) / 2.0;
-    rect.pos.y       = (uid.vidHeight - Q_max(maxHeight, 32)) / 2.0;
-    rect.size.width  = maxWidth + 32;
-    rect.size.height = 8 + maxHeight + 16 + 24 + 32;
-
+    rect.size.width  = maxWidth + 32 * scale[0];
+    rect.size.height = (8 + 16 + 24 + 32) * scale[1] + maxHeight;
+    rect.pos.x       = (uid.vidWidth - Q_max(rect.size.width, 100 * scale[0])) / 2.0;
+    rect.pos.y       = (uid.vidHeight - rect.size.height) / 2.0;
     setFrame(rect);
 
     const UIRect2D clientFrame = getChildSpace()->getClientFrame();
 
     UIRect2D labelRect;
-    labelRect.pos.x       = 8;
-    labelRect.pos.y       = 8;
+    labelRect.pos.x       = 8 * scale[0];
+    labelRect.pos.y       = 8 * scale[1];
     labelRect.size.width  = maxWidth;
     labelRect.size.height = maxHeight;
     m_label->setFrame(labelRect);
 
     UIRect2D buttonRect;
-    buttonRect.pos.x       = (clientFrame.size.width - 64) / 2;
-    buttonRect.pos.y       = labelRect.pos.y + labelRect.size.height + 16;
-    buttonRect.size.width  = 64;
-    buttonRect.size.height = 24;
+    buttonRect.size.width  = 64 * scale[0];
+    buttonRect.size.height = 24 * scale[1];
+    buttonRect.pos.x       = (clientFrame.size.width - buttonRect.size.width) / 2;
+    buttonRect.pos.y       = labelRect.pos.y + labelRect.size.height + 16 * scale[1];
     m_ok->setFrame(buttonRect);
 }
 

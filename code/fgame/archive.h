@@ -69,7 +69,7 @@ protected:
 public:
     ArchiveFile();
     ~ArchiveFile();
-    void        Close();
+    qboolean    Close();  // false if a file being written couldn't be saved in full
     const char *Filename(void);
     qboolean    Compress();
     size_t      Length(void);
@@ -114,6 +114,8 @@ public:
     ~Archiver();
     void FileError(const char *fmt, ...);
     void Close(void);
+    // Whether something went wrong, including the file not being written when closed.
+    qboolean HasFileError(void) const { return fileerror; }
 
     qboolean Read(str& name, qboolean harderror = qtrue);
     qboolean Read(const char *name, qboolean harderror = qtrue);

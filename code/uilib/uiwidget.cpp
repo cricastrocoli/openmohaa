@@ -693,6 +693,7 @@ UIWidget::UIWidget()
     m_iFontAlignmentHorizontal = FONT_JUSTHORZ_CENTER;
     m_iFontAlignmentVertical   = FONT_JUSTVERT_CENTER;
     m_bVirtual                 = false;
+    m_bScaleOverride           = false;
     m_scaleCvar                = NULL;
     m_enabledCvar              = "";
 
@@ -2407,7 +2408,7 @@ bool UIWidget::isVirtual() const
 
 const vec2_t& UIWidget::getVirtualScale() const
 {
-    if (m_bVirtual) {
+    if (m_bVirtual || m_bScaleOverride) {
         return m_vVirtualScale;
     } else {
         return uid.scaleRes;
@@ -2416,7 +2417,17 @@ const vec2_t& UIWidget::getVirtualScale() const
 
 const vec2_t& UIWidget::getHighResScale() const
 {
+    if (m_bScaleOverride) {
+        return m_vVirtualScale;
+    }
     return uid.scaleRes;
+}
+
+void UIWidget::setScale(float sx, float sy)
+{
+    m_bScaleOverride   = true;
+    m_vVirtualScale[0] = sx;
+    m_vVirtualScale[1] = sy;
 }
 
 void UIWidget::SetEnabledCvar(Event *ev)
