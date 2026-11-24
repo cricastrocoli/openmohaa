@@ -258,8 +258,15 @@ void UIFAKKLoadGameClass::LoadGame(Event *ev)
     Cbuf_AddText(cmdString);
 }
 
+// Added in OPM (Android port): when the save menu last asked for a save, so only that save
+// confirms with a dialog (see UI_ShowSaveResult). Levels save on their own with the same
+// "savegame" command (trigger_save), and those must not interrupt the game. A request the
+// server turned down (a dead player, say) expires after a few seconds.
+static int ui_menuSaveTime = -1;
+
 void UIFAKKLoadGameClass::SaveGame(Event *ev)
 {
+    ui_menuSaveTime = Sys_Milliseconds();
     Cbuf_ExecuteText(EXEC_NOW, "savegame");
 }
 
@@ -385,13 +392,17 @@ UI_ShowSaveResult
 
 Added in OPM (Android port)
   A dialog after saving, closed with OK, so a save that failed (no permission, storage full)
-  is never mistaken for one that worked. Routine saves (autosaves, quick saves) that worked
-  don't interrupt the game.
+  is never mistaken for one that worked. Only a save made from the save menu confirms that it
+  worked: autosaves, the levels' own saves and quick saves that worked don't interrupt the game.
 ====================
 */
 void UI_ShowSaveResult(qboolean success, qboolean routine)
 {
-    if (success && routine) {
+    const qboolean fromMenu = !routine && ui_menuSaveTime >= 0 && Sys_Milliseconds() - ui_menuSaveTime < 5000;
+
+    ui_menuSaveTime = -1;
+
+    if (success && !fromMenu) {
         return;
     }
 
