@@ -376,6 +376,7 @@ public:
     int        GetClipSize(firemode_t mode);
 
     qboolean CheckReload(firemode_t mode);
+    qboolean CanAlwaysPartialReload(void);
     qboolean ShouldReload(void);
     void     SetShouldReload(qboolean should_reload);
     void     StartReloading(void);

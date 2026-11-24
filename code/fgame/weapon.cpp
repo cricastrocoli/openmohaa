@@ -2350,13 +2350,6 @@ void Weapon::SetCantPartialReload(Event *ev)
         return;
     }
 
-    // g_garandreload 1: in single player, weapons that can only be reloaded when empty (the M1
-    // Garand: its en-bloc clip) can be reloaded at any time, like the others. Only the missing
-    // rounds are taken from the player's ammo.
-    if (g_gametype->integer == GT_SINGLE_PLAYER && gi.Cvar_Get("g_garandreload", "0", 0)->integer) {
-        return;
-    }
-
     m_bCanPartialReload = qfalse;
 }
 
@@ -2958,6 +2951,29 @@ void Weapon::DoneReloading(Event *ev)
 }
 
 //======================
+//Weapon::CanAlwaysPartialReload
+//
+// g_garandreload 1: in single player, weapons that can only be reloaded when empty (the M1
+// Garand: its en-bloc clip) can be reloaded at any time, like the others. Only the missing
+// rounds are taken from the player's ammo. Checked here, at reload time, rather than when the
+// weapon is created, so that it also applies to weapons restored from a saved game.
+//======================
+qboolean Weapon::CanAlwaysPartialReload(void)
+{
+    static cvar_t *g_garandreload;
+
+    if (g_gametype->integer != GT_SINGLE_PLAYER || !owner || !owner->IsSubclassOfPlayer()) {
+        return qfalse;
+    }
+
+    if (!g_garandreload) {
+        g_garandreload = gi.Cvar_Get("g_garandreload", "0", 0);
+    }
+
+    return g_garandreload->integer != 0;
+}
+
+//======================
 //Weapon::CheckReload
 //======================
 qboolean Weapon::CheckReload(firemode_t mode)
@@ -2972,7 +2988,7 @@ qboolean Weapon::CheckReload(firemode_t mode)
     }
 
     if (ammo_in_clip[mode] < ammo_clip_size[mode] && AmmoAvailable(mode)
-        && (m_bCanPartialReload || ammo_in_clip[mode] <= 0)) {
+        && (m_bCanPartialReload || ammo_in_clip[mode] <= 0 || CanAlwaysPartialReload())) {
         return true;
     }
 
