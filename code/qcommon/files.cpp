@@ -3135,6 +3135,23 @@ void FS_AddGameDirectory(const char *path, const char *dir) {
 	// Get .pk3 files
 	pakfiles = Sys_ListFiles(curpath, ".pk3", NULL, &numfiles, qfalse);
 
+	// Added for Android: the filter "*.pk3" also matches names that only contain ".pk3"
+	// (Com_Filter stops at the end of the filter), so a pak switched off by renaming it to
+	// "name.pk3.off" was still loaded. Keep only names that end in ".pk3".
+	if ( pakfiles ) {
+		int kept = 0;
+		for ( int k = 0; k < numfiles; k++ ) {
+			size_t len = strlen( pakfiles[k] );
+			if ( len >= 4 && !Q_stricmp( pakfiles[k] + len - 4, ".pk3" ) ) {
+				pakfiles[kept++] = pakfiles[k];
+			} else {
+				Z_Free( pakfiles[k] );
+			}
+		}
+		pakfiles[kept] = NULL;
+		numfiles = kept;
+	}
+
 	if ( pakfiles ) {
 		qsort( pakfiles, numfiles, sizeof(char*), paksort );
 	}
