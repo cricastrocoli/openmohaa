@@ -434,8 +434,23 @@ void DrawLineLoop(const vec2_t* points, int count, int stipple_factor, int stipp
 Set2DWindow
 ================
 */
+// Android, "menus in 4:3": the 2D picture (drawn stretched across a wide screen) is
+// squeezed into a centred 4:3 area, which undoes the stretch. Set by the client outside of
+// play (menus, videos, loading screens); the sides are cleared to black each frame. Both the
+// 2D windows and the scissor rectangles go through this.
+static void Pillarbox2D(int *x, int *w) {
+	if (r_pillarbox2d && r_pillarbox2d->integer && glConfig.vidWidth * 3 > glConfig.vidHeight * 4) {
+		float k  = (glConfig.vidHeight * 4.0f / 3.0f) / glConfig.vidWidth;
+		float x0 = (glConfig.vidWidth - glConfig.vidHeight * 4.0f / 3.0f) / 2.0f;
+		int   x1 = (int)(x0 + (*x + *w) * k + 0.5f);
+		*x = (int)(x0 + *x * k + 0.5f);
+		*w = x1 - *x;
+	}
+}
+
 void Set2DWindow(int x, int y, int w, int h, float left, float right, float bottom, float top, float n, float f) {
 	R_IssuePendingRenderCommands();
+	Pillarbox2D(&x, &w);
 	qglViewport(x, y, w, h);
 	qglScissor(x, y, w, h);
 	qglMatrixMode(GL_PROJECTION);
@@ -471,6 +486,7 @@ RE_Scissor
 ================
 */
 void RE_Scissor(int x, int y, int width, int height) {
+	Pillarbox2D(&x, &width);
 	qglEnable(GL_SCISSOR_TEST);
 	qglScissor(x, y, width, height);
 }

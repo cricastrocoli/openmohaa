@@ -135,6 +135,7 @@ cvar_t	*r_showhbox;
 cvar_t	*r_showstaticbboxes;
 cvar_t	*r_finish;
 cvar_t	*r_clear;
+cvar_t	*r_pillarbox2d;  // Android: 2D (menus, videos, loading) in a centred 4:3 area
 cvar_t	*r_swapInterval;
 cvar_t	*r_textureMode;
 cvar_t	*r_offsetFactor;
@@ -1497,6 +1498,7 @@ void R_Register( void )
 	r_showhbox = ri.Cvar_Get("r_showhbox", "0", CVAR_CHEAT);
 	r_showstaticbboxes = ri.Cvar_Get("r_showstaticbboxes", "0", CVAR_CHEAT);
 	r_clear = ri.Cvar_Get ("r_clear", "0", CVAR_CHEAT);
+	r_pillarbox2d = ri.Cvar_Get ("r_pillarbox2d", "0", CVAR_TEMP);
 	r_offsetFactor = ri.Cvar_Get( "r_offsetfactor", "-1", CVAR_CHEAT );
 	r_offsetUnits = ri.Cvar_Get( "r_offsetunits", "-2", CVAR_CHEAT );
 	r_drawBuffer = ri.Cvar_Get( "r_drawBuffer", "GL_BACK", CVAR_CHEAT );

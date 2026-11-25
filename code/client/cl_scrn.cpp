@@ -532,7 +532,25 @@ void SCR_UpdateScreen( void ) {
 	}
 
 	screen_recursive = qtrue;
-	
+
+#ifdef __ANDROID__
+	// "Menus in 4:3" (rp_menu43, set by the launcher): outside of play (menus, videos,
+	// loading screens) and in menus opened during play, the renderer draws the 2D picture in a centred 4:3 area, unstretched;
+	// in play it's widescreen as usual.
+	{
+		static cvar_t *menu43, *pillarbox;
+		if (!menu43) {
+			menu43    = Cvar_Get("rp_menu43", "0", 0);
+			pillarbox = Cvar_Get("r_pillarbox2d", "0", CVAR_TEMP);
+		}
+		// Out of play, or a menu open over it (the pause menu covers the whole screen).
+		int on = menu43->integer && (clc.state != CA_ACTIVE || (Key_GetCatcher() & KEYCATCH_UI));
+		if (pillarbox->integer != on) {
+			Cvar_Set("r_pillarbox2d", on ? "1" : "0");
+		}
+	}
+#endif
+
 	CL_StartHunkUsers(qfalse);
 	SCR_SimpleUpdateScreen();
 

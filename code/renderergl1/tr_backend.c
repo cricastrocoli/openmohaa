@@ -1445,6 +1445,14 @@ const void	*RB_SwapBuffers( const void *data ) {
 	GLimp_LogComment( "***************** RB_SwapBuffers *****************\n\n\n" );
 	GLimp_EndFrame();
 
+	// Android, menus in 4:3 (see Set2DWindow): start the next frame with black sides.
+	if ( r_pillarbox2d->integer ) {
+		qglViewport( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+		qglScissor( 0, 0, glConfig.vidWidth, glConfig.vidHeight );
+		qglClearColor( 0, 0, 0, 1 );
+		qglClear( GL_COLOR_BUFFER_BIT );
+	}
+
 	backEnd.in2D = qfalse;
 
 	return (const void *)(cmd + 1);
