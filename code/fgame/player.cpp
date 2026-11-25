@@ -4468,6 +4468,77 @@ This will be called once for each client frame, which will
 usually be a couple times for each server frame.
 ==============
 */
+// Added for Android: optional aim assist, single player only. Each frame the game picks the
+// living, visible enemy closest to the crosshair (within rp_aa_range degrees of its chest) and
+// publishes it in the cvar rp_aimtarget as "entnum chestX chestY chestZ bottomZ topZ" ("" for
+// none). The client (native/android_input.cpp) only helps while the crosshair is over that body.
+void Player::UpdateAimAssist(void)
+{
+    static cvar_t *enabled, *range, *maxdist;
+    static char    last[96];
+    char           value[96] = "";
+
+    if (!enabled) {
+        enabled = gi.Cvar_Get("rp_aimassist", "0", 0);
+        range   = gi.Cvar_Get("rp_aa_range", "10", 0);
+        maxdist = gi.Cvar_Get("rp_aa_maxdist", "1330", 0);  // about 34 m: no help further away
+        gi.Cvar_Get("rp_aimtarget", "", 0);
+    }
+
+    if (enabled->integer && g_gametype->integer == GT_SINGLE_PLAYER && !camera && !m_pVehicle && !IsDead()) {
+        Vector    forward, chest;
+        float     bestCos = cos(DEG2RAD(range->value > 1 ? range->value : 1));
+        Sentient *found   = NULL;
+
+        AngleVectors(v_angle, forward, NULL, NULL);
+        for (int i = 1; i <= SentientList.NumObjects(); i++) {
+            Sentient *s = SentientList.ObjectAt(i);
+            if (!s || s == this || !s->IsSubclassOfActor() || s->IsDead() || s->health <= 0
+                || s->m_Team == m_Team || (s->edict->r.svFlags & SVF_NOCLIENT)) {
+                continue;
+            }
+            // The point aimed at: the lower chest (55% of the way up the body, standing or
+            // crouched, well below the head); if a wall hides it, the upper chest, then the
+            // head (an enemy behind cover shows only those).
+            static const float heights[] = {0.55f, 0.75f, 0.92f};
+            Vector c;
+            float  d   = -1;
+            bool   vis = false;
+            for (int h = 0; h < 3 && !vis; h++) {
+                c    = s->origin;
+                c[2] = s->absmin[2] + (s->absmax[2] - s->absmin[2]) * heights[h];
+                Vector to   = c - m_vViewPos;
+                float  dist = to.normalize();
+                if (dist < 16 || dist > maxdist->value) {
+                    break;
+                }
+                d = DotProduct(to, forward);
+                if (d <= bestCos) {
+                    break;
+                }
+                vis = G_SightTrace(m_vViewPos, vec_zero, vec_zero, c, this, s, MASK_CANSEE, qfalse, "AimAssist");
+            }
+            if (!vis) {
+                continue;
+            }
+            bestCos = d;
+            chest   = c;
+            found   = s;
+        }
+        if (found) {
+            Com_sprintf(
+                value, sizeof(value), "%d %.0f %.0f %.0f %.0f %.0f", found->entnum, chest[0], chest[1], chest[2],
+                found->absmin[2], found->absmax[2]
+            );
+        }
+    }
+
+    if (strcmp(value, last)) {
+        Q_strncpyz(last, value, sizeof(last));
+        gi.cvar_set("rp_aimtarget", value);
+    }
+}
+
 void Player::ClientThink(void)
 {
     // sanity check the command time to prevent speedup cheating
@@ -4543,6 +4614,8 @@ void Player::ClientThink(void)
         } else {
             ClientMove(current_ucmd);
         }
+
+        UpdateAimAssist();
 
         // Save cmd angles so that we can get delta angle movements next frame
         client->cmd_angles[0] = SHORT2ANGLE(current_ucmd->angles[0]);

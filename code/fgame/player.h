@@ -597,6 +597,7 @@ public:
     void     CheckMoveFlags(void);
     void     ClientInactivityTimer(void);
     void     ClientThink(void) override;
+    void     UpdateAimAssist(void);  // Added for Android: see player.cpp
     void     UpdateEnemies(void);
 
     void InitLegsStateTable(void);
