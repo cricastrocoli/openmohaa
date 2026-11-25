@@ -1141,6 +1141,10 @@ getScreenWidth
 */
 static float getScreenWidth()
 {
+#ifdef __ANDROID__
+    // The width in scaled units, whatever the screen's shape and the HUD size.
+    return uid.vidWidth / uid.scaleRes[0];
+#endif
     if (uid.bHighResScaling) {
         return maxWidthRes;
     } else {
@@ -3897,6 +3901,25 @@ void UI_ResolutionChange(void)
     CL_FillUIImports();
     CL_FillUIDef();
 
+#ifdef __ANDROID__
+    // Android: scaled by the height alone (a 4:3 1280x960 screen wasn't scaled at all, its
+    // width not being above 1280), times the player's HUD size (rp_hudscale, set by the
+    // launcher: 1, 1.25, 1.5).
+    {
+        static cvar_t *hudScale;
+        if (!hudScale) {
+            hudScale = Cvar_Get("rp_hudscale", "1", 0);
+        }
+        float s = (float)uid.vidHeight / maxHeightRes;
+        if (s < 1) {
+            s = 1;
+        }
+        s *= hudScale->value >= 0.5f && hudScale->value <= 3 ? hudScale->value : 1;
+        uid.scaleRes[0]     = s;
+        uid.scaleRes[1]     = s;
+        uid.bHighResScaling = s != 1 ? qtrue : qfalse;
+    }
+#else
     // Added in OPM
     //  Scaling for high resolutions
     if (uid.vidWidth > maxWidthRes && uid.vidHeight > maxHeightRes) {
@@ -3912,6 +3935,7 @@ void UI_ResolutionChange(void)
         uid.scaleRes[1]     = 1;
         uid.bHighResScaling = qfalse;
     }
+#endif
 
     if (!uie.ResolutionChange) {
         return;
