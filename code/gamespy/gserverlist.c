@@ -170,6 +170,7 @@ Creates and returns a new (empty) GServerList. */
 GServerList	ServerListNew(const char *gamename, const char *enginename, const char *seckey, int maxconcupdates, void *CallBackFn, int CallBackFnType, void *instance)
 {
     GServerList list;
+    int i;
 
     list = (GServerList) gsimalloc(sizeof(struct GServerListImplementation));
     assert(list != NULL);
@@ -180,6 +181,11 @@ GServerList	ServerListNew(const char *gamename, const char *enginename, const ch
     list->updatelist = gsimalloc(maxconcupdates * sizeof(UpdateInfo));
     memset(list->updatelist, 0, maxconcupdates * sizeof(UpdateInfo));
     assert(list->updatelist != NULL);
+    // No socket yet: 0 is a valid descriptor (stdin), and closing it aborts the process on
+    // Android (fdsan) when the list is aborted before every socket was opened.
+    for (i = 0; i < maxconcupdates; i++) {
+        list->updatelist[i].s = INVALID_SOCKET;
+    }
     strcpy(list->gamename, gamename);
     strcpy(list->seckey, seckey);
     strcpy(list->enginename, enginename);
@@ -202,6 +208,9 @@ GServerList	ServerListNew(const char *gamename, const char *enginename, const ch
     }
     list->slsockets = (GServerListSocket)gsimalloc(sizeof(struct GServerListSocketImplementation) * list->numslsockets);
     memset(list->slsockets, 0, sizeof(struct GServerListSocketImplementation) * list->numslsockets);
+    for (i = 0; i < list->numslsockets; i++) {
+        list->slsockets[i].s = INVALID_SOCKET;  // as above
+    }
     list->startslindex = 0;
     list->lastsltime = current_time();
 
@@ -252,7 +261,8 @@ static GError FreeUpdateList(GServerList serverlist)
     int i;
     for (i = 0 ; i < serverlist->maxupdates ; i++)
     {
-        closesocket(serverlist->updatelist[i].s);
+        if (serverlist->updatelist[i].s != INVALID_SOCKET) closesocket(serverlist->updatelist[i].s);
+        serverlist->updatelist[i].s = INVALID_SOCKET;
     }
     return 0;
 
@@ -273,7 +283,7 @@ static GError CreateServerListSocket(GServerList serverlist, GServerListSocket s
     }
 
     if (slsocket->socketstate != ls_none) {
-        closesocket(slsocket->s);
+        if (slsocket->s != INVALID_SOCKET) closesocket(slsocket->s);
         slsocket->s = INVALID_SOCKET;
     }
 
@@ -301,7 +311,7 @@ static GError CreateServerListSocket(GServerList serverlist, GServerListSocket s
     if (connect ( slsocket->s, (struct sockaddr *) &saddr, sizeof saddr ) != 0
         && (lasterr = GOAGetLastError(slsocket->slsocket), lasterr != WSAEWOULDBLOCK && lasterr != WSAEINPROGRESS))
     {
-        closesocket(slsocket->s);
+        if (slsocket->s != INVALID_SOCKET) closesocket(slsocket->s);
         slsocket->s = INVALID_SOCKET;
         return GE_NOCONNECT;
     }
@@ -740,7 +750,7 @@ static GError ServerListLANList(GServerList serverlist, GServerListSocket slsock
     }
     if (current_time() - serverlist->lanstarttime > LAN_SEARCH_TIME) //done waiting for replies
     {
-        closesocket(slsocket->s);
+        if (slsocket->s != INVALID_SOCKET) closesocket(slsocket->s);
         slsocket->s = INVALID_SOCKET;
         ServerListModeChange(serverlist, sl_querying);
     }
@@ -859,7 +869,7 @@ static GError ServerListReadList(GServerList serverlist, GServerListSocket slsoc
     len = recv(slsocket->s, slsocket->data + slsocket->oldlen, sizeof(slsocket->data) - slsocket->oldlen - 1, 0);
     if (gsiSocketIsError(len) || len == 0)
     {
-        closesocket(slsocket->s);
+        if (slsocket->s != INVALID_SOCKET) closesocket(slsocket->s);
         slsocket->s = INVALID_SOCKET;
         slsocket->socketstate = ls_none;
         slsocket->oldlen = 0; //clear data so it can be used again
@@ -909,7 +919,7 @@ static GError ServerListReadList(GServerList serverlist, GServerListSocket slsoc
         {
             if (strncmp(p,"\\final\\",7) == 0 || serverlist->abortupdate)
             {
-                closesocket(slsocket->s);
+                if (slsocket->s != INVALID_SOCKET) closesocket(slsocket->s);
                 slsocket->s = INVALID_SOCKET;
                 slsocket->socketstate = ls_none;
                 slsocket->oldlen = 0; //clear data so it can be used again
@@ -1262,7 +1272,7 @@ static GError ServerListCheckSocketError(GServerList serverlist, GServerListSock
 
     // Abort if the socket has an error or if it connect/recv has timed out
     if (so_error || current_time() >= slsocket->lastreplytime + INTERNET_SEARCH_TIME) {
-        closesocket(slsocket->s);
+        if (slsocket->s != INVALID_SOCKET) closesocket(slsocket->s);
         slsocket->s = INVALID_SOCKET;
         slsocket->socketstate = ls_none;
         return GE_NOCONNECT;
@@ -1285,7 +1295,7 @@ static GError ServerListStartQuery(GServerList serverlist, GServerListSocket sls
 
     if (serverlist->abortupdate) {
         for(i = 0; i < serverlist->numslsockets; i++) {
-            closesocket(serverlist->slsockets[i].s);
+            if (serverlist->slsockets[i].s != INVALID_SOCKET) closesocket(serverlist->slsockets[i].s);
             serverlist->slsockets[i].s = INVALID_SOCKET;
         }
         ServerListModeChange(serverlist, sl_idle);

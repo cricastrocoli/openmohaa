@@ -2028,9 +2028,9 @@ void Com_Init( char *commandLine ) {
 
     // Added in OPM
     //  Initialize GameSpy related stuff
-#ifndef __ANDROID__
+    //  (On Android too: it only sets up the master server list, which the internet
+    //  server browser needs; without it the browser queries no master at all.)
     Com_InitGameSpy();
-#endif
 	iEnd = Sys_Milliseconds();
 	Com_Printf( "--- Common Initialization Complete --- %i ms\n", iEnd - iStart );
 }
