@@ -4475,8 +4475,8 @@ usually be a couple times for each server frame.
 void Player::UpdateAimAssist(void)
 {
     static cvar_t *enabled, *range, *maxdist;
-    static char    last[96];
-    char           value[96] = "";
+    static char    last[128];
+    char           value[128] = "";
 
     if (!enabled) {
         enabled = gi.Cvar_Get("rp_aimassist", "0", 0);
@@ -4485,12 +4485,23 @@ void Player::UpdateAimAssist(void)
         gi.Cvar_Get("rp_aimtarget", "", 0);
     }
 
-    if (enabled->integer && g_gametype->integer == GT_SINGLE_PLAYER && !camera && !m_pVehicle && !IsDead()) {
+    // On a turret (a fixed one, or one on a moving truck) the view is the turret's camera and
+    // the player may ride a vehicle: help there too. Other cameras (cutscenes) and driving
+    // a vehicle get none.
+    bool onTurret = m_pTurret != NULL;
+    if (enabled->integer && g_gametype->integer == GT_SINGLE_PLAYER && (onTurret || (!camera && !m_pVehicle))
+        && !IsDead()) {
         Vector    forward, chest;
         float     bestCos = cos(DEG2RAD(range->value > 1 ? range->value : 1));
         Sentient *found   = NULL;
 
         AngleVectors(v_angle, forward, NULL, NULL);
+        // Sight lines start a little ahead of a turret's camera, clear of the gun and the
+        // vehicle carrying it.
+        Vector eye = m_vViewPos;
+        if (onTurret) {
+            eye += forward * 40;
+        }
         for (int i = 1; i <= SentientList.NumObjects(); i++) {
             Sentient *s = SentientList.ObjectAt(i);
             if (!s || s == this || !s->IsSubclassOfActor() || s->IsDead() || s->health <= 0
@@ -4516,7 +4527,7 @@ void Player::UpdateAimAssist(void)
                 if (d <= bestCos) {
                     break;
                 }
-                vis = G_SightTrace(m_vViewPos, vec_zero, vec_zero, c, this, s, MASK_CANSEE, qfalse, "AimAssist");
+                vis = G_SightTrace(eye, vec_zero, vec_zero, c, this, s, MASK_CANSEE, qfalse, "AimAssist");
             }
             if (!vis) {
                 continue;
@@ -4526,9 +4537,10 @@ void Player::UpdateAimAssist(void)
             found   = s;
         }
         if (found) {
+            // Also the view's position: the client can't tell where a turret's camera is.
             Com_sprintf(
-                value, sizeof(value), "%d %.0f %.0f %.0f %.0f %.0f", found->entnum, chest[0], chest[1], chest[2],
-                found->absmin[2], found->absmax[2]
+                value, sizeof(value), "%d %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f", found->entnum, chest[0], chest[1],
+                chest[2], found->absmin[2], found->absmax[2], m_vViewPos[0], m_vViewPos[1], m_vViewPos[2]
             );
         }
     }
