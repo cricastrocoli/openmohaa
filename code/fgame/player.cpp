@@ -4484,7 +4484,7 @@ void Player::UpdateAimAssist(void)
         range    = gi.Cvar_Get("rp_aa_range", "10", 0);
         maxdist  = gi.Cvar_Get("rp_aa_maxdist", "1330", 0);  // about 34 m: no help further away
         vrange   = gi.Cvar_Get("rp_aa_vrange", "16", 0);     // on a moving vehicle's gun
-        vmaxdist = gi.Cvar_Get("rp_aa_vmaxdist", "4000", 0);  // the truck's enemies are far away
+        vmaxdist = gi.Cvar_Get("rp_aa_vmaxdist", "2600", 0);  // the truck's enemies are far away
         gi.Cvar_Get("rp_aimtarget", "", 0);
         debug = gi.Cvar_Get("rp_aa_debug", "1", 0);  // TEMPORARY diagnostic build: default 0 before release
     }
