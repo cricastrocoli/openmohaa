@@ -4474,7 +4474,8 @@ usually be a couple times for each server frame.
 // none). The client (native/android_input.cpp) only helps while the crosshair is over that body.
 void Player::UpdateAimAssist(void)
 {
-    static cvar_t *enabled, *range, *maxdist, *vrange, *vmaxdist;
+    static cvar_t *enabled, *range, *maxdist, *vrange, *vmaxdist, *debug;
+    static float   nextDebug;
     static char    last[128];
     char           value[128] = "";
 
@@ -4483,8 +4484,22 @@ void Player::UpdateAimAssist(void)
         range    = gi.Cvar_Get("rp_aa_range", "10", 0);
         maxdist  = gi.Cvar_Get("rp_aa_maxdist", "1330", 0);  // about 34 m: no help further away
         vrange   = gi.Cvar_Get("rp_aa_vrange", "16", 0);     // on a moving vehicle's gun
-        vmaxdist = gi.Cvar_Get("rp_aa_vmaxdist", "2400", 0);
+        vmaxdist = gi.Cvar_Get("rp_aa_vmaxdist", "4000", 0);  // the truck's enemies are far away
         gi.Cvar_Get("rp_aimtarget", "", 0);
+        debug = gi.Cvar_Get("rp_aa_debug", "1", 0);  // TEMPORARY diagnostic build: default 0 before release
+    }
+
+    bool dbg = debug->integer && level.time >= nextDebug;
+    if (dbg) {
+        nextDebug = level.time + 1.0f;
+        gi.Printf(
+            "AADBG srv: on=%d gt=%d dead=%d camera=%d turret=%s(vt=%d bind=%s) vehicle=%s selfbind=%s mt=%d v_angle=%.0f %.0f view=%.0f %.0f %.0f\n",
+            enabled->integer, g_gametype->integer, IsDead() ? 1 : 0, camera ? 1 : 0,
+            m_pTurret ? m_pTurret->getClassname() : "-", m_pTurret ? m_pTurret->IsSubclassOfVehicleTurretGun() : 0,
+            (m_pTurret && m_pTurret->bindmaster) ? m_pTurret->bindmaster->getClassname() : "-",
+            m_pVehicle ? m_pVehicle->getClassname() : "-", bindmaster ? bindmaster->getClassname() : "-",
+            (int)getMoveType(), v_angle[0], v_angle[1], m_vViewPos[0], m_vViewPos[1], m_vViewPos[2]
+        );
     }
 
     // On the gun of a moving vehicle (the truck) the view is the turret's camera: help there,
@@ -4499,15 +4514,35 @@ void Player::UpdateAimAssist(void)
         float     bestCos = cos(DEG2RAD(cone > 1 ? cone : 1));
         Sentient *found   = NULL;
 
-        AngleVectors(v_angle, forward, NULL, NULL);
+        // On a vehicle's gun the screen shows the turret's camera, which can point a few
+        // degrees away from v_angle: aim from it.
+        AngleVectors(onVehicleGun && camera ? camera->angles : v_angle, forward, NULL, NULL);
         // Sight lines start a little ahead of a turret's camera, clear of the gun and the
         // vehicle carrying it.
         Vector eye = m_vViewPos;
         if (onVehicleGun) {
             eye += forward * 40;
         }
+        int nEnemies = 0, nCone = 0, nFar = 0;
         for (int i = 1; i <= SentientList.NumObjects(); i++) {
             Sentient *s = SentientList.ObjectAt(i);
+            if (dbg && s && s != this && s->IsSubclassOfActor() && !s->IsDead() && s->m_Team != m_Team) {
+                Vector to   = s->origin - m_vViewPos;
+                float  dist = to.normalize();
+                float  ang  = RAD2DEG(acos(Q_clamp_float(DotProduct(to, forward), -1, 1)));
+                nEnemies++;
+                if (dist > maxd) {
+                    nFar++;
+                } else if (ang < cone) {
+                    nCone++;
+                }
+                if (nEnemies <= 4) {
+                    gi.Printf(
+                        "AADBG  enemy %d dist=%.0f ang=%.1f hidden=%d\n", s->entnum, dist, ang,
+                        (s->edict->r.svFlags & SVF_NOCLIENT) ? 1 : 0
+                    );
+                }
+            }
             if (!s || s == this || !s->IsSubclassOfActor() || s->IsDead() || s->health <= 0
                 || s->m_Team == m_Team || (s->edict->r.svFlags & SVF_NOCLIENT)) {
                 continue;
@@ -4539,6 +4574,12 @@ void Player::UpdateAimAssist(void)
             bestCos = d;
             chest   = c;
             found   = s;
+        }
+        if (dbg) {
+            gi.Printf(
+                "AADBG  vehgun=%d enemies=%d tooFar=%d inCone=%d found=%d\n", onVehicleGun ? 1 : 0, nEnemies, nFar,
+                nCone, found ? found->entnum : -1
+            );
         }
         if (found) {
             // Also the view's position (the client can't tell where a turret's camera is) and
