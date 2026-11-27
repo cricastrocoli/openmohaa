@@ -4474,32 +4474,36 @@ usually be a couple times for each server frame.
 // none). The client (native/android_input.cpp) only helps while the crosshair is over that body.
 void Player::UpdateAimAssist(void)
 {
-    static cvar_t *enabled, *range, *maxdist;
+    static cvar_t *enabled, *range, *maxdist, *vrange, *vmaxdist;
     static char    last[128];
     char           value[128] = "";
 
     if (!enabled) {
-        enabled = gi.Cvar_Get("rp_aimassist", "0", 0);
-        range   = gi.Cvar_Get("rp_aa_range", "10", 0);
-        maxdist = gi.Cvar_Get("rp_aa_maxdist", "1330", 0);  // about 34 m: no help further away
+        enabled  = gi.Cvar_Get("rp_aimassist", "0", 0);
+        range    = gi.Cvar_Get("rp_aa_range", "10", 0);
+        maxdist  = gi.Cvar_Get("rp_aa_maxdist", "1330", 0);  // about 34 m: no help further away
+        vrange   = gi.Cvar_Get("rp_aa_vrange", "16", 0);     // on a moving vehicle's gun
+        vmaxdist = gi.Cvar_Get("rp_aa_vmaxdist", "2400", 0);
         gi.Cvar_Get("rp_aimtarget", "", 0);
     }
 
-    // On a turret (a fixed one, or one on a moving truck) the view is the turret's camera and
-    // the player may ride a vehicle: help there too. Other cameras (cutscenes) and driving
-    // a vehicle get none.
-    bool onTurret = m_pTurret != NULL;
-    if (enabled->integer && g_gametype->integer == GT_SINGLE_PLAYER && (onTurret || (!camera && !m_pVehicle))
+    // On the gun of a moving vehicle (the truck) the view is the turret's camera: help there,
+    // more than on foot. Fixed turrets are strong enough already: none there, nor in other
+    // cameras (cutscenes) or when driving.
+    bool onVehicleGun = m_pTurret && (m_pTurret->IsSubclassOfVehicleTurretGun() || m_pVehicle || m_pTurret->bindmaster);
+    if (enabled->integer && g_gametype->integer == GT_SINGLE_PLAYER && (onVehicleGun || (!camera && !m_pVehicle && !m_pTurret))
         && !IsDead()) {
         Vector    forward, chest;
-        float     bestCos = cos(DEG2RAD(range->value > 1 ? range->value : 1));
+        float     cone    = onVehicleGun ? vrange->value : range->value;
+        float     maxd    = onVehicleGun ? vmaxdist->value : maxdist->value;
+        float     bestCos = cos(DEG2RAD(cone > 1 ? cone : 1));
         Sentient *found   = NULL;
 
         AngleVectors(v_angle, forward, NULL, NULL);
         // Sight lines start a little ahead of a turret's camera, clear of the gun and the
         // vehicle carrying it.
         Vector eye = m_vViewPos;
-        if (onTurret) {
+        if (onVehicleGun) {
             eye += forward * 40;
         }
         for (int i = 1; i <= SentientList.NumObjects(); i++) {
@@ -4520,7 +4524,7 @@ void Player::UpdateAimAssist(void)
                 c[2] = s->absmin[2] + (s->absmax[2] - s->absmin[2]) * heights[h];
                 Vector to   = c - m_vViewPos;
                 float  dist = to.normalize();
-                if (dist < 16 || dist > maxdist->value) {
+                if (dist < 16 || dist > maxd) {
                     break;
                 }
                 d = DotProduct(to, forward);
@@ -4537,10 +4541,12 @@ void Player::UpdateAimAssist(void)
             found   = s;
         }
         if (found) {
-            // Also the view's position: the client can't tell where a turret's camera is.
+            // Also the view's position (the client can't tell where a turret's camera is) and
+            // whether the player is on a vehicle's gun.
             Com_sprintf(
-                value, sizeof(value), "%d %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f", found->entnum, chest[0], chest[1],
-                chest[2], found->absmin[2], found->absmax[2], m_vViewPos[0], m_vViewPos[1], m_vViewPos[2]
+                value, sizeof(value), "%d %.0f %.0f %.0f %.0f %.0f %.0f %.0f %.0f %d", found->entnum, chest[0], chest[1],
+                chest[2], found->absmin[2], found->absmax[2], m_vViewPos[0], m_vViewPos[1], m_vViewPos[2],
+                onVehicleGun ? 1 : 0
             );
         }
     }
